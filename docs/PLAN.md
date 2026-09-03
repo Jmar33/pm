@@ -113,19 +113,19 @@ Success criteria:
 
 Checklist:
 
-- [ ] Define the proposed user, board, column, card, and ordering relationships.
-- [ ] Define identifiers, required fields, ownership rules, and timestamps where useful.
-- [ ] Define how the normalized frontend board JSON maps to SQLite records and API payloads.
-- [ ] Define initialization and seed behavior for a new database.
-- [ ] Save the proposal as `docs/kanban-schema.json`.
-- [ ] Document the database approach and tradeoffs in `docs/`.
+- [x] Define the proposed user, board, column, card, and ordering relationships.
+- [x] Define identifiers, required fields, ownership rules, and timestamps where useful.
+- [x] Define how the normalized frontend board JSON maps to SQLite records and API payloads.
+- [x] Define initialization and seed behavior for a new database.
+- [x] Save the proposal as `docs/kanban-schema.json`.
+- [x] Document the database approach and tradeoffs in `docs/DATABASE.md`.
 - [ ] Get explicit user sign-off before implementing the schema.
 
 Tests and checks:
 
-- Validate the proposal as JSON.
-- Check that every field needed by the current board model is represented.
-- Review persistence, ordering, ownership, and migration assumptions against the MVP requirements.
+- [x] Validate the proposal as JSON.
+- [x] Check that every field needed by the current board model is represented.
+- [x] Review persistence, ordering, ownership, and migration assumptions against the MVP requirements.
 
 Success criteria:
 
@@ -136,20 +136,22 @@ Success criteria:
 
 Checklist:
 
-- [ ] Create the SQLite database automatically when it does not exist.
-- [ ] Implement initialization/seed logic for the approved schema.
-- [ ] Add authenticated API routes to read a user board.
-- [ ] Add routes to rename columns and create, edit, delete, and move cards.
-- [ ] Validate request and response payloads with typed FastAPI models.
-- [ ] Enforce user ownership and the one-board-per-user MVP rule.
-- [ ] Return clear errors for missing boards, cards, columns, and invalid moves.
+- [x] Create the SQLite database automatically when it does not exist.
+- [x] Implement initialization/seed logic for the approved schema.
+- [x] Add authenticated API routes to read a user board.
+- [x] Add routes to rename columns and create, edit, delete, and move cards.
+- [x] Validate request and response payloads with typed FastAPI models.
+- [x] Enforce user ownership and the one-board-per-user MVP rule.
+- [x] Return clear errors for missing boards, cards, columns, and invalid moves.
 
 Tests and checks:
 
-- Run backend unit tests for database creation, seeding, reads, and each mutation.
-- Test invalid payloads, missing resources, ordering, and ownership boundaries.
-- Test repeated initialization does not duplicate seed data.
-- Run the backend test suite against a temporary SQLite database.
+- [x] Run backend unit tests for database creation, seeding, reads, and each mutation.
+- [x] Test invalid payloads, missing resources, ordering, and ownership boundaries.
+- [x] Test repeated initialization does not duplicate seed data.
+- [x] Run the backend test suite against a temporary SQLite database.
+
+Current validation: `7` backend tests pass, Docker build passes, and live container checks cover health, seeded board projection, and authenticated column mutation.
 
 Success criteria:
 

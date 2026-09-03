@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Project Management MVP SQLite Schema Proposal",
+  "version": 1,
+  "description": "Normalized relational schema for one Kanban board per user in the MVP, extensible to multiple users and boards.",
+  "database": {
+    "engine": "sqlite",
+    "file": "data/kanban.sqlite3",
+    "foreign_keys": true,
+    "initialization": "Create the database file and tables on application startup if they do not exist. Seed the MVP user and board only when absent.",
+    "transactions": "Read-modify-write board mutations in a single transaction. Roll back the complete mutation on validation or persistence failure."
+  },
+  "tables": {
+    "users": {
+      "purpose": "Application users and future ownership boundary.",
+      "columns": {
+        "id": { "type": "TEXT", "primary_key": true, "description": "Stable user identifier." },
+        "username": { "type": "TEXT", "required": true, "unique": true },
+        "created_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" }
+      }
+    },
+    "boards": {
+      "purpose": "A user's Kanban board. The MVP permits one row per user.",
+      "columns": {
+        "id": { "type": "TEXT", "primary_key": true, "description": "Stable board identifier." },
+        "user_id": { "type": "TEXT", "required": true, "references": "users.id", "on_delete": "CASCADE" },
+        "name": { "type": "TEXT", "required": true },
+        "created_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" },
+        "updated_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" }
+      },
+      "constraints": ["UNIQUE(user_id) in MVP"]
+    },
+    "columns": {
+      "purpose": "Ordered stages belonging to a board.",
+      "columns": {
+        "id": { "type": "TEXT", "primary_key": true },
+        "board_id": { "type": "TEXT", "required": true, "references": "boards.id", "on_delete": "CASCADE" },
+        "title": { "type": "TEXT", "required": true },
+        "position": { "type": "INTEGER", "required": true, "minimum": 0 },
+        "created_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" },
+        "updated_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" }
+      },
+      "constraints": ["UNIQUE(board_id, position)"]
+    },
+    "cards": {
+      "purpose": "Card content, independent of its current stage.",
+      "columns": {
+        "id": { "type": "TEXT", "primary_key": true },
+        "board_id": { "type": "TEXT", "required": true, "references": "boards.id", "on_delete": "CASCADE" },
+        "title": { "type": "TEXT", "required": true },
+        "details": { "type": "TEXT", "required": true },
+        "created_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" },
+        "updated_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" }
+      },
+      "constraints": ["UNIQUE(board_id, id)"]
+    },
+    "board_cards": {
+      "purpose": "Associates each card with one column and stores its order within that column.",
+      "columns": {
+        "card_id": { "type": "TEXT", "primary_key": true, "references": "cards.id", "on_delete": "CASCADE" },
+        "column_id": { "type": "TEXT", "required": true, "references": "columns.id", "on_delete": "CASCADE" },
+        "position": { "type": "INTEGER", "required": true, "minimum": 0 },
+        "updated_at": { "type": "TEXT", "required": true, "format": "ISO-8601 UTC" }
+      },
+      "constraints": ["UNIQUE(column_id, position)"]
+    }
+  },
+  "invariants": [
+    "Every board belongs to exactly one user.",
+    "Every column belongs to exactly one board.",
+    "Every card belongs to exactly one board and has exactly one board_cards membership row.",
+    "A card's board, column's board, and board_cards membership must refer to the same board.",
+    "Positions are zero-based and ordered within their parent collection.",
+    "The MVP seeds five columns and eight cards for the user named user, with the current demo ordering.",
+    "API responses must not expose records belonging to another user."
+  ],
+  "api_projection": {
+    "board": {
+      "columns": [
+        { "id": "columns.id", "title": "columns.title", "cardIds": "board_cards.card_id ordered by board_cards.position" }
+      ],
+      "cards": {
+        "key": "cards.id",
+        "value": { "id": "cards.id", "title": "cards.title", "details": "cards.details" }
+      }
+    },
+    "write_rules": [
+      "Create and edit card content in cards and its board_cards membership in one transaction.",
+      "Rename a column by updating columns.title.",
+      "Move a card by updating board_cards.column_id and normalizing affected positions.",
+      "Delete a card by deleting cards; board_cards is removed by cascade."
+    ]
+  },
+  "seed": {
+    "user": { "id": "user-1", "username": "user" },
+    "board": { "id": "board-user-1", "name": "Kanban Studio" },
+    "source": "frontend/src/lib/kanban.ts initialData",
+    "credentials": "The password remains an application-level MVP credential and is not stored in this proposal as a database field."
+  }
+}
