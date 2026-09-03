@@ -1,0 +1,21 @@
+from fastapi.testclient import TestClient
+
+from app.main import app
+
+
+client = TestClient(app)
+
+
+def test_health_check() -> None:
+    response = client.get("/api/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_home_serves_static_html() -> None:
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Project Management MVP" in response.text
+    assert response.headers["content-type"].startswith("text/html")
