@@ -5,7 +5,14 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 
 const SESSION_KEY = "pm-authenticated";
 
-const subscribeToSession = () => () => {};
+const sessionListeners = new Set<() => void>();
+const subscribeToSession = (listener: () => void) => {
+  sessionListeners.add(listener);
+  return () => sessionListeners.delete(listener);
+};
+const notifySessionChange = () => {
+  sessionListeners.forEach((listener) => listener());
+};
 const getSessionAuth = () => sessionStorage.getItem(SESSION_KEY) === "true";
 const getServerSessionAuth = () => false;
 
@@ -18,6 +25,7 @@ const LoginForm = ({ onLogin }: { onLogin: () => void }) => {
     event.preventDefault();
     if (username === "user" && password === "password") {
       sessionStorage.setItem(SESSION_KEY, "true");
+      notifySessionChange();
       onLogin();
       return;
     }
@@ -83,6 +91,7 @@ export default function Home() {
 
   const handleLogout = () => {
     sessionStorage.removeItem(SESSION_KEY);
+    notifySessionChange();
     setAuthRefresh((value) => !value);
   };
 
