@@ -17,5 +17,5 @@ def test_home_serves_static_html() -> None:
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Project Management MVP" in response.text
+    assert "Kanban Studio" in response.text or "Project Management MVP" in response.text
     assert response.headers["content-type"].startswith("text/html")

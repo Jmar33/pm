@@ -7,8 +7,10 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
+  pointerWithin,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { KanbanColumn } from "@/components/KanbanColumn";
@@ -19,6 +21,7 @@ import { createId, moveCard, type BoardData } from "@/lib/kanban";
 export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
   const [board, setBoard] = useState<BoardData | null>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -42,20 +45,31 @@ export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
   }
 
   const handleDragStart = (event: DragStartEvent) => {
+    if (isSaving) return;
     setActiveCardId(event.active.id as string);
+    setOverId(null);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    setOverId(event.over?.id as string | null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCardId(null);
+    setOverId(null);
 
     if (!over || active.id === over.id) {
       return;
     }
 
+    if (isSaving) return;
+
     const nextColumns = moveCard(board.columns, active.id as string, over.id as string);
     const targetColumn = nextColumns.find((column) => column.cardIds.includes(active.id as string));
     if (!targetColumn) return;
+    const previousBoard = board;
+    setBoard({ ...board, columns: nextColumns });
     setIsSaving(true);
     try {
       const nextBoard = await boardApi.moveCard(
@@ -66,6 +80,7 @@ export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
       setBoard(nextBoard);
       setError(null);
     } catch {
+      setBoard(previousBoard);
       setError("Could not move the card. Your board was not changed.");
     } finally {
       setIsSaving(false);
@@ -113,6 +128,18 @@ export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
   };
 
   const activeCard = activeCardId ? cardsById[activeCardId] : null;
+  const collisionDetection = (args: Parameters<typeof pointerWithin>[0]) => {
+    const collisionArgs = {
+      ...args,
+      droppableContainers: args.droppableContainers.filter(
+        (container) => container.id !== args.active.id
+      ),
+    };
+    const pointerCollisions = pointerWithin(collisionArgs);
+    return pointerCollisions.length > 0
+      ? pointerCollisions
+      : closestCenter(collisionArgs);
+  };
 
   return (
     <div className="relative overflow-hidden">
@@ -174,8 +201,9 @@ export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
 
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={collisionDetection}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <section className="grid gap-6 lg:grid-cols-5">
@@ -184,6 +212,9 @@ export const KanbanBoard = ({ onLogout }: { onLogout?: () => void }) => {
                 key={column.id}
                 column={column}
                 cards={column.cardIds.map((cardId) => board.cards[cardId])}
+                isHighlighted={
+                  overId === column.id || column.cardIds.includes(overId ?? "")
+                }
                 onRename={handleRenameColumn}
                 onAddCard={handleAddCard}
                 onDeleteCard={handleDeleteCard}

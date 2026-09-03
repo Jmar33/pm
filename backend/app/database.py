@@ -236,34 +236,37 @@ def move_card(username: str, card_id: str, column_id: str, position: int) -> boo
             return False
         source_column_id = membership["column_id"]
         source_ids = [
-            row["card_id"] for row in connection.execute(
-                "SELECT card_id FROM board_cards WHERE column_id = ? ORDER BY position", (source_column_id,)
+            row["card_id"]
+            for row in connection.execute(
+                "SELECT card_id FROM board_cards WHERE column_id = ? ORDER BY position",
+                (source_column_id,),
             )
         ]
-        target_ids = source_ids if source_column_id == column_id else [
-            row["card_id"] for row in connection.execute(
-                "SELECT card_id FROM board_cards WHERE column_id = ? ORDER BY position", (column_id,)
+        target_ids = [
+            row["card_id"]
+            for row in connection.execute(
+                "SELECT card_id FROM board_cards WHERE column_id = ? ORDER BY position",
+                (column_id,),
             )
         ]
         source_ids.remove(card_id)
         if source_column_id == column_id:
-            ordered_ids = source_ids
-        else:
-            ordered_ids = target_ids
-        insert_at = min(position, len(ordered_ids))
-        ordered_ids.insert(insert_at, card_id)
+            target_ids = source_ids
+        target_ids.insert(min(position, len(target_ids)), card_id)
         now = utc_now()
-        connection.execute("UPDATE board_cards SET position = position + 1000000 WHERE column_id IN (?, ?)", (source_column_id, column_id))
-        for index, ordered_card_id in enumerate(source_ids if source_column_id != column_id else ordered_ids):
+        connection.execute(
+            "UPDATE board_cards SET position = -position - 1 WHERE column_id IN (?, ?)",
+            (source_column_id, column_id),
+        )
+        for index, ordered_card_id in enumerate(source_ids):
             connection.execute(
-                "UPDATE board_cards SET position = ?, updated_at = ? WHERE card_id = ?",
-                (index, now, ordered_card_id),
+                "UPDATE board_cards SET column_id = ?, position = ?, updated_at = ? WHERE card_id = ?",
+                (source_column_id, index, now, ordered_card_id),
             )
-        if source_column_id != column_id:
-            for index, ordered_card_id in enumerate(ordered_ids):
-                connection.execute(
-                    "UPDATE board_cards SET column_id = ?, position = ?, updated_at = ? WHERE card_id = ?",
-                    (column_id, index, now, ordered_card_id),
-                )
+        for index, ordered_card_id in enumerate(target_ids):
+            connection.execute(
+                "UPDATE board_cards SET column_id = ?, position = ?, updated_at = ? WHERE card_id = ?",
+                (column_id, index, now, ordered_card_id),
+            )
         connection.execute("UPDATE boards SET updated_at = ? WHERE id = ?", (now, board_id))
         return True

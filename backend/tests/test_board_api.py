@@ -107,3 +107,26 @@ def test_rejects_invalid_mutations(board_client: TestClient) -> None:
     assert missing_column.status_code == 404
     assert missing_card.status_code == 404
     assert invalid_payload.status_code == 422
+
+
+def test_repeated_moves_preserve_board_order(board_client: TestClient) -> None:
+    for _ in range(10):
+        response = board_client.post(
+            "/api/boards/user/cards/card-1/move",
+            headers=auth_headers(),
+            json={"column_id": "col-backlog", "position": 1},
+        )
+        assert response.status_code == 200
+
+    for _ in range(10):
+        response = board_client.post(
+            "/api/boards/user/cards/card-1/move",
+            headers=auth_headers(),
+            json={"column_id": "col-review", "position": 0},
+        )
+        assert response.status_code == 200
+
+    board = response.json()
+    assert board["columns"][0]["cardIds"] == ["card-2"]
+    assert board["columns"][3]["cardIds"] == ["card-1", "card-6"]
+    assert sum(len(column["cardIds"]) for column in board["columns"]) == len(board["cards"])

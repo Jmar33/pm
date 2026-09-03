@@ -179,6 +179,8 @@ Tests and checks:
 
 Current validation: `9` frontend unit tests pass, frontend lint and static build pass, `7` backend tests pass, live API persistence checks pass, and live browser login/create/reload/delete checks pass. The repository Playwright command remains pending because the host Node.js version is `18.19.0`; the browser flow was validated through the integrated browser instead.
 
+Drag regression follow-up: repeated same-column and cross-column moves are covered by a backend regression test and a 20-move stress check. The backend move transaction now rebuilds affected ordering deterministically, and the UI prevents overlapping drag saves, updates immediately, rolls back failed saves, and excludes the active card from collision candidates.
+
 Success criteria:
 
 - Board changes survive page reloads and container restarts when the SQLite volume is retained.
